@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cash Book</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f6b4f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cash Book">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root { --bg:#f4f7f5; --card:#fff; --text:#1b1f24; --muted:#6a737d; --accent:#0f6b4f; --in:#1a7f37; --out:#c2410c; --err:#cf222e; --line:rgba(128,128,128,.35); }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0d1117; --card:#161b22; --text:#e6edf3; --muted:#8b949e; --accent:#2a9d75; --in:#3fb950; --out:#f0883e; --err:#f85149; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text);
+         min-height:100vh; display:flex; justify-content:center; padding:20px 16px 32px; }
+  .card { background:var(--card); border-radius:16px; padding:22px; width:100%; max-width:400px; align-self:flex-start;
+          box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  h1 { font-size:1.3rem; margin:0 0 4px; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  button { font-family:inherit; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+
+  /* Lock-screen style PIN entry */
+  .card.login { background:transparent; box-shadow:none; max-width:320px; text-align:center; padding:24px 0; }
+  .card.login h1 { font-size:1.5rem; margin-top:24px; }
+  .lock { width:44px; height:44px; margin:8px auto 0; color:var(--accent); }
+  .dots { display:flex; justify-content:center; gap:18px; margin:28px 0 36px; min-height:14px; }
+  .dots.shake { animation:shake .4s; }
+  @keyframes shake { 20%,60% { transform:translateX(-10px); } 40%,80% { transform:translateX(10px); } }
+  .dot { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--text); transition:background .1s; }
+  .dot.on { background:var(--text); }
+  .pad { display:grid; grid-template-columns:repeat(3,76px); gap:16px 24px; justify-content:center; user-select:none; -webkit-user-select:none; }
+  .pad button { width:76px; height:76px; border-radius:50%; border:0; background:rgba(128,128,128,.18); color:var(--text);
+                font-size:2rem; font-weight:300; line-height:1; padding:0; display:flex; align-items:center; justify-content:center;
+                transition:background .15s; }
+  .pad button:active { background:rgba(128,128,128,.45); transition:none; }
+  .pad button.ghost { background:transparent; font-size:1.5rem; }
+  .pad .spacer { visibility:hidden; }
+  .unlock { margin-top:28px; padding:14px 48px; font-size:1.05rem; font-weight:600; border:0; border-radius:999px;
+            background:var(--accent); color:#fff; }
+  .unlock:disabled { opacity:.35; }
+
+  /* Balance header */
+  .top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .top .logout { background:none; border:0; color:var(--muted); padding:6px 0 6px 8px; font-size:.9rem; }
+  .balance { margin-top:14px; padding:16px; border-radius:14px; background:var(--accent); color:#fff; text-align:center; }
+  .balance small { display:block; opacity:.85; font-size:.8rem; letter-spacing:.5px; text-transform:uppercase; }
+  .balance b { display:block; font-size:2rem; margin-top:2px; }
+  .month { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; text-align:center; }
+  .month div { padding:8px; border-radius:10px; background:rgba(128,128,128,.12); font-size:.8rem; color:var(--muted); }
+  .month b { display:block; font-size:1.05rem; color:var(--text); }
+  .month .in b { color:var(--in); } .month .out b { color:var(--out); }
+
+  /* Entry form */
+  label, .lbl { display:block; margin-top:16px; font-size:.9rem; color:var(--muted); }
+  input, textarea { display:block; width:100%; margin-top:6px; font-size:1.1rem; padding:12px; border-radius:10px; border:1px solid var(--line);
+          background:transparent; color:var(--text); font-family:inherit; min-height:50px; }
+  textarea { resize:none; min-height:64px; font-size:1rem; }
+  input:focus, textarea:focus { outline:2px solid var(--accent); outline-offset:-1px; }
+  .amount { position:relative; }
+  .amount span { position:absolute; left:14px; top:50%; transform:translateY(-35%); font-size:1.5rem; color:var(--muted); }
+  .amount input { font-size:1.6rem; font-weight:600; padding-left:36px; }
+  .toggle { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px; }
+  .toggle button { padding:14px 4px; font-size:1.05rem; font-weight:600; border-radius:12px; border:2px solid var(--line);
+                   background:transparent; color:var(--muted); }
+  .toggle button.on.in { border-color:var(--in); background:var(--in); color:#fff; }
+  .toggle button.on.out { border-color:var(--out); background:var(--out); color:#fff; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .chips button { padding:10px 16px; border-radius:999px; border:1px solid var(--line); background:transparent;
+                  color:var(--text); font-size:.95rem; }
+  .chips button.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  .save { width:100%; padding:16px; margin-top:22px; font-size:1.1rem; font-weight:600; border:0; border-radius:12px;
+          background:var(--accent); color:#fff; }
+  .save:disabled { opacity:.5; }
+
+  /* Recent entries */
+  h2 { font-size:1rem; margin:28px 0 4px; }
+  .entry { display:flex; gap:10px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--line); }
+  .entry:last-child { border-bottom:0; }
+  .entry .main { flex:1; min-width:0; }
+  .entry .cat { font-weight:600; }
+  .entry .meta { font-size:.8rem; color:var(--muted); word-break:break-word; }
+  .entry .amt { font-weight:700; white-space:nowrap; text-align:right; }
+  .entry .amt.in { color:var(--in); } .entry .amt.out { color:var(--out); }
+  .entry.void .cat, .entry.void .amt { text-decoration:line-through; opacity:.5; }
+  .entry .rm { display:block; margin:4px 0 0 auto; background:none; border:0; color:var(--err); font-size:.75rem; padding:2px 0; }
+  .badge { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; font-size:.65rem; font-weight:600;
+           background:rgba(128,128,128,.2); color:var(--muted); vertical-align:middle; }
+  .empty { padding:16px 0; text-align:center; }
+
+  /* Toast: stays in view even when the form is scrolled */
+  #msg { min-height:1.3em; margin-top:12px; text-align:center; font-size:.95rem; }
+  #msg:not(:empty) { position:sticky; bottom:0; background:var(--card); padding:10px 0; }
+  .card.login #msg:not(:empty) { background:transparent; }
+  .err { color:var(--err); } .ok { color:var(--in); }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="card login" id="card">
+
+  <!-- PIN screen -->
+  <div id="loginView">
+    <svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+    </svg>
+    <h1>Cash Book</h1>
+    <div class="muted">Enter your PIN</div>
+    <div class="dots" id="dots"></div>
+    <div class="pad" id="pad"></div>
+    <button class="unlock" id="unlock" disabled>Unlock</button>
+  </div>
+
+  <!-- Landing page: balance, entry form, recent entries -->
+  <div id="formView" class="hidden">
+    <div class="top">
+      <div><h1 id="hello"></h1><div class="muted">Record cash in or out</div></div>
+      <button class="logout" id="logout">Log out</button>
+    </div>
+
+    <div class="balance"><small>Cash balance</small><b id="balanceVal">--</b></div>
+    <div class="month">
+      <div class="in">In this month<b id="monthIn">--</b></div>
+      <div class="out">Out this month<b id="monthOut">--</b></div>
+    </div>
+
+    <label for="date">Date</label>
+    <input type="date" id="date">
+
+    <div class="lbl">Type</div>
+    <div class="toggle">
+      <button type="button" class="in" id="typeIn">+ Cash In</button>
+      <button type="button" class="out" id="typeOut">− Cash Out</button>
+    </div>
+
+    <label for="amount">Amount</label>
+    <div class="amount"><span id="cur"></span><input type="number" id="amount" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+
+    <div class="lbl">Category</div>
+    <div class="chips" id="chips"></div>
+
+    <label for="comment">Comments <span class="muted">(optional)</span></label>
+    <textarea id="comment" maxlength="300" placeholder="e.g. Smith wedding, advance for Raj"></textarea>
+
+    <button class="save" id="saveBtn">Save</button>
+
+    <h2>Recent entries</h2>
+    <div id="recent"></div>
+  </div>
+
+  <div id="msg"></div>
+</div>
+
+<script>
+  var API_URL = 'https://script.google.com/macros/s/AKfycbzZNv-CHD4OO2b5te2LBJUZ__ieJlrCz-mXN9M2OgiVnB8yPF8zoWQ44sgEnrNQJqFtSg/exec';
+  var CURRENCY = 'AUD';   // change to your currency code, e.g. 'USD', 'GBP', 'NZD'
+
+  var PIN_LEN_MAX = 8;
+  var pin = '';
+  var type = 'In';
+  var category = '';
+  var categories = { In: [], Out: [] };
+  var $ = function (id) { return document.getElementById(id); };
+
+  var money = new Intl.NumberFormat(undefined, { style: 'currency', currency: CURRENCY });
+  $('cur').textContent = (money.formatToParts(0).filter(function (p) { return p.type === 'currency'; })[0] || {}).value || '';
+
+  // Random per-device id, used only for wrong-PIN lockout.
+  var deviceId = (function () {
+    try {
+      var id = localStorage.getItem('deviceId');
+      if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('deviceId', id); }
+      return id;
+    } catch (e) { return 'unknown'; }
+  })();
+
+  // ---- keypad ----
+  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(function (k) {
+    var b = document.createElement('button');
+    if (k === '') { b.className = 'spacer'; b.disabled = true; }
+    else if (k === '⌫') { b.className = 'ghost'; b.setAttribute('aria-label', 'Delete'); b.textContent = '⌫'; }
+    else { b.textContent = k; }
+    b.onclick = function () { press(k); };
+    $('pad').appendChild(b);
+  });
+  $('unlock').onclick = submitPin;
+
+  function press(k) {
+    if (k === '⌫') pin = pin.slice(0, -1);
+    else if (pin.length < PIN_LEN_MAX) pin += k;
+    if (navigator.vibrate) navigator.vibrate(8);
+    drawDots();
+  }
+  // 4 outlined placeholders; they fill as you type and grow for longer PINs.
+  function drawDots() {
+    $('dots').innerHTML = '';
+    for (var i = 0; i < Math.max(4, pin.length); i++) {
+      var d = document.createElement('div'); d.className = i < pin.length ? 'dot on' : 'dot'; $('dots').appendChild(d);
+    }
+    $('unlock').disabled = pin.length === 0;
+  }
+  drawDots();
+
+  // Desktop keyboard support (only on the PIN screen).
+  document.addEventListener('keydown', function (e) {
+    if ($('loginView').classList.contains('hidden')) return;
+    if (/^\d$/.test(e.key)) press(e.key);
+    else if (e.key === 'Backspace') press('⌫');
+    else if (e.key === 'Enter') submitPin();
+  });
+
+  function wrongPin(text) {
+    pin = ''; drawDots(); msg(text, 'err');
+    $('dots').classList.remove('shake'); void $('dots').offsetWidth; $('dots').classList.add('shake');
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+  }
+
+  function msg(text, cls) { $('msg').textContent = text || ''; $('msg').className = cls || ''; }
+
+  // ---- API ----
+  // text/plain keeps this a "simple" request, so the browser skips the CORS preflight Apps Script can't answer.
+  function api(body) {
+    body.pin = pin;
+    body.deviceId = deviceId;
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.ok) throw new Error(j.error);
+      return j.data;
+    }).catch(function (e) {
+      throw new Error(e instanceof TypeError ? 'No connection. Check your internet and try again.' : e.message);
+    });
+  }
+
+  function submitPin() {
+    if (!pin) return;
+    $('unlock').disabled = true;
+    msg('Checking…');
+    api({ action: 'login' })
+      .then(function (r) {
+        categories = r.categories;
+        $('hello').textContent = 'Hi, ' + r.name;
+        $('date').value = todayStr();
+        setType('In');
+        render(r);
+        show('formView');
+      })
+      .catch(function (e) { wrongPin(e.message); });
+  }
+
+  function show(view) {
+    ['loginView', 'formView'].forEach(function (v) { $(v).classList.toggle('hidden', v !== view); });
+    $('card').classList.toggle('login', view === 'loginView');
+    msg('');
+  }
+
+  // ---- landing page ----
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text; // textContent, never innerHTML: comments come from users
+    return n;
+  }
+
+  function setType(t) {
+    type = t;
+    category = '';
+    $('typeIn').classList.toggle('on', t === 'In');
+    $('typeOut').classList.toggle('on', t === 'Out');
+    $('chips').innerHTML = '';
+    categories[t].forEach(function (c) {
+      var b = el('button', '', c);
+      b.type = 'button';
+      b.onclick = function () {
+        category = c;
+        Array.prototype.forEach.call($('chips').children, function (x) { x.classList.toggle('on', x === b); });
+      };
+      $('chips').appendChild(b);
+    });
+  }
+  $('typeIn').onclick = function () { setType('In'); };
+  $('typeOut').onclick = function () { setType('Out'); };
+
+  // Balance, month totals and the recent list from the server's latest numbers.
+  function render(st) {
+    $('balanceVal').textContent = money.format(st.summary.balance);
+    $('monthIn').textContent = money.format(st.summary.monthIn);
+    $('monthOut').textContent = money.format(st.summary.monthOut);
+
+    var list = $('recent');
+    list.innerHTML = '';
+    if (!st.recent.length) list.appendChild(el('div', 'muted empty', 'No entries yet.'));
+    st.recent.forEach(function (en) {
+      var row = el('div', 'entry' + (en.voided ? ' void' : ''));
+      var main = el('div', 'main');
+      var cat = el('div', 'cat', en.category);
+      if (en.voided) cat.appendChild(el('span', 'badge', 'Removed'));
+      main.appendChild(cat);
+      if (en.comment) main.appendChild(el('div', 'meta', en.comment));
+      main.appendChild(el('div', 'meta', fmtDate(en.date) + ' · ' + en.by));
+      row.appendChild(main);
+
+      var side = el('div');
+      side.appendChild(el('div', 'amt ' + (en.type === 'In' ? 'in' : 'out'), (en.type === 'In' ? '+' : '−') + money.format(en.amount)));
+      if (!en.voided) {
+        var rm = el('button', 'rm', 'Remove');
+        rm.onclick = function () {
+          if (!confirm('Remove this entry?\n\n' + en.category + ' ' + money.format(en.amount) + '\n\nIt stays in the sheet marked "Void" and no longer counts toward the balance.')) return;
+          msg('Removing…');
+          api({ action: 'void', id: en.id })
+            .then(function (st2) { render(st2); msg('Entry removed.', 'ok'); })
+            .catch(function (e) { msg(e.message, 'err'); });
+        };
+        side.appendChild(rm);
+      }
+      row.appendChild(side);
+      list.appendChild(row);
+    });
+  }
+
+  function fmtDate(s) {
+    var p = s.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  $('saveBtn').onclick = function () {
+    var amount = parseFloat($('amount').value);
+    if (!$('date').value) return msg('Pick a date.', 'err');
+    if (!(amount > 0)) return msg('Enter an amount.', 'err');
+    if (!category) return msg('Choose a category.', 'err');
+    $('saveBtn').disabled = true;
+    msg('Saving…');
+    api({ action: 'save', date: $('date').value, type: type, amount: amount, category: category, comment: $('comment').value })
+      .then(function (st) {
+        render(st);
+        // Keep date and type for the next entry; clear the rest.
+        $('amount').value = ''; $('comment').value = '';
+        setType(type);
+        msg('Saved ✓', 'ok');
+      })
+      .catch(function (e) { msg(e.message, 'err'); })
+      .then(function () { $('saveBtn').disabled = false; });
+  };
+
+  $('logout').onclick = function () {
+    pin = ''; drawDots();
+    ['amount', 'comment'].forEach(function (id) { $(id).value = ''; });
+    show('loginView');
+  };
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+</script>
+</body>
+</html>
