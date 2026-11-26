@@ -18,8 +18,8 @@ var RECENT_COUNT = 15;       // entries shown on the landing page
 
 // Categories offered for each type. Edit freely; the app reads them from here.
 var CATEGORIES = {
-  In:  ['Catering', 'In-store', 'Other'],
-  Out: ['Cash out', 'Pay salary', 'Catering', 'Other']
+  In:  ['Catering', 'Till', 'Salary', 'Others'],
+  Out: ['Catering', 'Till', 'Salary', 'Others']
 };
 
 // Cash column numbers

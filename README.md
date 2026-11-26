@@ -43,7 +43,7 @@ Note: a free GitHub account needs the repository to be **public** for Pages. The
 
 ## How it works
 
-- **Entry:** Date (defaults to today), Cash In / Cash Out toggle, amount, category and a comment. The categories change with the toggle. Edit them in `CATEGORIES` at the top of `Code.gs`, then redeploy.
+- **Entry:** Date (defaults to today), Cash In / Cash Out toggle, amount, category and a comment. The categories are Catering, Till, Salary and Others for both In and Out. Edit them in `CATEGORIES` at the top of `Code.gs`, then redeploy.
 - **Sheet columns (`Cash` tab):** Entered At, Date, Type, Amount, Category, Comment, Entered By, ID, Status.
 - **Balance** = total In minus total Out, ignoring voided rows. It is calculated by the script, so it stays correct if you add older entries by hand in the sheet (fill in an ID so they show up).
 - **Removing an entry:** the "Remove" link on a recent entry marks the row `Void` (it is never deleted, so there is an audit trail). The person who entered it or an admin can do this.
